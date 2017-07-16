@@ -1,0 +1,12 @@
+version: '2'
+services:
+  database:
+    image: postgres:9.5
+    environment:
+      POSTGRES_PASSWORD: test
+      POSTGRES_USER: test
+      POSTGRES_DB: test
+    volumes:
+      - ./test/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d/
+    ports:
+      - "54322:5432"
