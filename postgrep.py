@@ -4,6 +4,7 @@ import argparse
 import os
 import sys
 import logging
+from getpass import getpass
 from logging import warning, debug, info, error
 import psycopg2
 import progressbar
@@ -39,6 +40,24 @@ logging.StreamHandler(sys.stdout)
 
 debug("Connecting to database...")
 
-conn = psycopg2.connect(dbname=args.database, host=args.hostname,
-                        user=args.username)
+conn = None
+
+# try a first connection with no password, this should use ~.pgpass
+try:
+    conn = psycopg2.connect(dbname=args.database, host=args.hostname,
+                            port=args.port,
+                            user=args.username)
+except psycopg2.OperationalError as e:
+    # test if it's required password
+    if 'no password' in str(e):
+         conn = psycopg2.connect(dbname=args.database, host=args.hostname,
+                                 port=args.port,
+                                 user=args.username,
+                                 password=getpass())
+    else:
+        raise e
+
+# List database entity
+
+
 
