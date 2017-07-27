@@ -7,6 +7,7 @@ import logging
 from getpass import getpass
 from logging import warning, debug, info, error
 import psycopg2
+import psycopg2.extras
 import progressbar
 
 # Parse command line argument
@@ -30,11 +31,11 @@ args = parser.parse_args()
 
 # Set logging level
 if args.verbose >= 2:
-        log_level = logging.DEBUG
+    log_level = logging.DEBUG
 elif args.verbose == 1:
-        log_level = logging.INFO
+    log_level = logging.INFO
 else:
-        log_level = logging.WARN
+    log_level = logging.WARN
 logging.basicConfig(level=log_level, format='%(levelname)s: %(message)s')
 logging.StreamHandler(sys.stdout)
 
@@ -57,7 +58,22 @@ except psycopg2.OperationalError as e:
     else:
         raise e
 
-# List database entity
-
+# List database entity with type and length
+cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+cur.execute("""SELECT information_schema.tables.table_schema AS schema,
+                      information_schema.tables.table_name AS table,
+                      column_name AS column,
+                      ordinal_position AS position,
+                      data_type AS type,
+                      character_maximum_length AS length
+               FROM information_schema.tables
+               LEFT JOIN information_schema.columns ON (information_schema.tables.table_schema =
+                                                          information_schema.columns.table_schema AND
+                                                        information_schema.tables.table_name =
+                                                          information_schema.columns.table_name)
+               WHERE table_type = 'BASE TABLE'
+               AND information_schema.tables.table_schema NOT IN ('pg_catalog','information_schema')""")
+for rec in cur:
+    print("%(schema)s.%(table)s.%(column)s %(position)s %(type)s %(length)s" % rec)
 
 
