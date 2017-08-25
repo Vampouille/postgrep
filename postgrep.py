@@ -60,7 +60,9 @@ except psycopg2.OperationalError as e:
 
 # List database entity with type and length
 cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-cur.execute("""SELECT information_schema.tables.table_schema AS schema,
+cur.execute("""SELECT (information_schema.tables.table_schema || '.' ||  
+                      information_schema.tables.table_name)::regclass::int AS oid,
+                      information_schema.tables.table_schema AS schema,
                       information_schema.tables.table_name AS table,
                       column_name AS column,
                       ordinal_position AS position,
@@ -73,7 +75,39 @@ cur.execute("""SELECT information_schema.tables.table_schema AS schema,
                                                           information_schema.columns.table_name)
                WHERE table_type = 'BASE TABLE'
                AND information_schema.tables.table_schema NOT IN ('pg_catalog','information_schema')""")
+tables_by_oid = {}
+table_to_oid = {}
 for rec in cur:
-    print("%(schema)s.%(table)s.%(column)s %(position)s %(type)s %(length)s" % rec)
+    fqtn = "%s.%s" % (rec['schema'], rec['table'])
+    oid = rec['oid'] 
+    tables_by_oid[oid] = fqtn
+    table_to_oid[fqtn] = oid
+    print("%(oid)s %(schema)s.%(table)s.%(column)s %(position)s %(type)s %(length)s" % rec)
 
+cur.execute("""SELECT
+                   t.oid,
+                   t.relname AS table_name,
+                   i.relname AS index_name,
+                   array_agg(a.attname) AS column_names
+               FROM
+                   pg_class t,
+                   pg_class i,
+                   pg_index ix,
+                   pg_attribute a
+               WHERE
+                   t.oid = ix.indrelid
+                   and i.oid = ix.indexrelid
+                   and a.attrelid = t.oid
+                   and a.attnum = ANY(ix.indkey)
+                   and t.relkind = 'r'
+               GROUP BY t.oid, t.relname, index_name
+               ORDER BY
+                   t.relname,
+                   i.relname""")
+for rec in cur:
+    print("%(oid)s %(table_name)s %(index_name)s %(column_names)s" % rec)
+
+# SELECT 'public.departments'::regclass::int;
+
+# SELECT (table_schema || '.' || table_name)::regclass::int, table_name FROM information_schema.tables;
 

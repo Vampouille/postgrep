@@ -1,3 +1,3 @@
 psycopg2
-psycopg2.extras
+#psycopg2.extras
 progressbar2
