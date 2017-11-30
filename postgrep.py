@@ -111,3 +111,13 @@ for rec in cur:
 
 # SELECT (table_schema || '.' || table_name)::regclass::int, table_name FROM information_schema.tables;
 
+# Query to fetch all primary keys, this will be used to identify row that contains pattern
+#  select tc.table_schema, tc.table_name, kc.column_name
+#  from information_schema.table_constraints tc
+#    join information_schema.key_column_usage kc 
+#        on kc.table_name = tc.table_name and kc.table_schema = tc.table_schema and kc.constraint_name = tc.constraint_name
+#        where tc.constraint_type = 'PRIMARY KEY'
+#        order by tc.table_schema,
+#                 tc.table_name,
+#                          kc.position_in_unique_constraint;
+
